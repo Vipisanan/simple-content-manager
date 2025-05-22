@@ -22,7 +22,6 @@ public class Content {
     private User writer;
 
     private String title;
-    private String summary;
 
     @Column(length = 2048)
     private String details;
