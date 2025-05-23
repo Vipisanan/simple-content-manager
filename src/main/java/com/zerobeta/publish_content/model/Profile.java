@@ -21,5 +21,10 @@ public class Profile {
     private String displayName;
     private String bio;
     private String country;
-    private String avatarUrl;
+
+    public boolean isCompleted() {
+        return displayName != null && !displayName.isBlank()
+                && bio != null && !bio.isBlank()
+                && country != null && !country.isBlank();
+    }
 }

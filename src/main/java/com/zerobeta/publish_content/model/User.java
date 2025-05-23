@@ -1,6 +1,5 @@
 package com.zerobeta.publish_content.model;
 
-import com.zerobeta.publish_content.model.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,13 +23,13 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Profile profile;
+
+    public boolean canPublish() {
+        return profile != null && profile.isCompleted();
+    }
 }
