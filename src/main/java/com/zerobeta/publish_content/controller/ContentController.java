@@ -1,16 +1,15 @@
 package com.zerobeta.publish_content.controller;
 
 import com.zerobeta.publish_content.dto.ContentDto;
+import com.zerobeta.publish_content.dto.CreateContentDto;
 import com.zerobeta.publish_content.dto.PagedResponse;
 import com.zerobeta.publish_content.service.ContentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/contents")
@@ -20,29 +19,36 @@ public class ContentController {
     private final ContentService contentService;
 
     @PostMapping
-    public ResponseEntity<ContentDto> createContent(@RequestBody ContentDto contentDto) {
+    public ResponseEntity<ContentDto> createContent(@RequestBody CreateContentDto contentDto) {
         ContentDto created = contentService.createContent(contentDto);
         return ResponseEntity.ok(created);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ContentDto> getContent(@PathVariable Long id) {
-        Optional<ContentDto> content = contentService.getContentById(id);
-        return ResponseEntity.ok(content.get());
+        return contentService.getContentById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
 
     @GetMapping
-    public ResponseEntity<PagedResponse<ContentDto>> getAllContents(@PageableDefault(size = 20) Pageable pageable) {
-        Page<ContentDto> page = contentService.getAllContents(pageable);
+    public ResponseEntity<PagedResponse<ContentDto>> getAllContents(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ContentDto> contentPage = contentService.getAllContents(pageable);
+
         PagedResponse<ContentDto> response = PagedResponse.<ContentDto>builder()
-                .data(page.getContent())
-                .pageNumber(page.getNumber())
-                .pageSize(page.getSize())
-                .totalElements(page.getTotalElements())
-                .totalPages(page.getTotalPages())
-                .last(page.isLast())
+                .data(contentPage.getContent())
+                .pageNumber(contentPage.getNumber())
+                .pageSize(contentPage.getSize())
+                .totalElements(contentPage.getTotalElements())
+                .totalPages(contentPage.getTotalPages())
+                .last(contentPage.isLast())
                 .build();
+
         return ResponseEntity.ok(response);
     }
 

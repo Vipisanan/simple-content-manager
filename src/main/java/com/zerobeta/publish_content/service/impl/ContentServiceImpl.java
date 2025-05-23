@@ -1,6 +1,8 @@
 package com.zerobeta.publish_content.service.impl;
 
+import com.zerobeta.publish_content.dto.CategoryCreateRequest;
 import com.zerobeta.publish_content.dto.ContentDto;
+import com.zerobeta.publish_content.dto.CreateContentDto;
 import com.zerobeta.publish_content.mapper.ContentMapper;
 import com.zerobeta.publish_content.model.Category;
 import com.zerobeta.publish_content.model.Content;
@@ -8,6 +10,7 @@ import com.zerobeta.publish_content.model.User;
 import com.zerobeta.publish_content.repository.CategoryRepository;
 import com.zerobeta.publish_content.repository.ContentRepository;
 import com.zerobeta.publish_content.repository.UserRepository;
+import com.zerobeta.publish_content.service.CategoryService;
 import com.zerobeta.publish_content.service.ContentService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
@@ -30,27 +33,42 @@ public class ContentServiceImpl implements ContentService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final ContentMapper contentMapper;
+    private final CategoryService categoryService;
 
 
     @Override
-    public ContentDto createContent(ContentDto contentDto) {
+    public ContentDto createContent(CreateContentDto createContentDto) {
         // Fetch writer (User) by email
         User writer = null;
-        if (contentDto.getWriterName() != null) {
-            writer = userRepository.findByEmail(contentDto.getWriterName());
+        if (createContentDto.getWriterEmail() != null) {
+            writer = userRepository.findByEmail(createContentDto.getWriterEmail());
             if (writer == null) {
-                throw new IllegalArgumentException("Writer not found: " + contentDto.getWriterName());
+                throw new IllegalArgumentException("Writer not found: " + createContentDto.getWriterEmail());
             }
         }
 
-        // Fetch categories by name
+        // Fetch categories by name if not exist crete a category
         Set<Category> categories = Collections.emptySet();
-        if (contentDto.getCategoryNames() != null && !contentDto.getCategoryNames().isEmpty()) {
-            categories = new HashSet<>(categoryRepository.findByNameIn(contentDto.getCategoryNames()));
+        if (createContentDto.getCategoryNames() != null && !createContentDto.getCategoryNames().isEmpty()) {
+//            categories = new HashSet<>(categoryRepository.findByNameIgnoreCase(createContentDto.getCategoryNames()));
+//            if (categories.isEmpty()) {
+//                createContentDto.getCategoryNames().forEach(category -> {
+//                    CategoryCreateRequest categoryCreateRequest = new CategoryCreateRequest(category);
+//                    categoryService.createCategory(categoryCreateRequest);
+//                });
+//            }
+            createContentDto.getCategoryNames().forEach(category -> {
+                Optional<Category> existedCategory = categoryRepository.findByNameIgnoreCase(category);
+                        if(!existedCategory.isPresent()) {
+                            CategoryCreateRequest categoryCreateRequest = new CategoryCreateRequest(category);
+                            categoryService.createCategory(categoryCreateRequest);
+                        }
+            });
+            categories = new HashSet<>(categoryRepository.findByNameIn(createContentDto.getCategoryNames()));
         }
 
         // Map to entity
-        Content content = contentMapper.toEntity(contentDto, writer, categories);
+        Content content = contentMapper.toEntity(createContentDto, writer, categories);
 
         // Save and map back to DTO
         Content saved = contentRepository.save(content);
@@ -83,8 +101,8 @@ public class ContentServiceImpl implements ContentService {
         content.setDatePublished(contentDto.getDatePublished());
         content.setUpdatedAt(contentDto.getUpdatedAt());
 
-        if (contentDto.getWriterName() != null) {
-            User writer = userRepository.findByEmail(contentDto.getWriterName());
+        if (contentDto.getWriterEmail() != null) {
+            User writer = userRepository.findByEmail(contentDto.getWriterEmail());
             content.setWriter(writer);
         }
         if (contentDto.getCategoryNames() != null) {
